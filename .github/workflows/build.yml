@@ -19,19 +19,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      
-
-      - name: Verify and extract ZIP project
+      - name: Find and Extract Project ZIP
         shell: bash
         run: |
-          ZIP_FILE=$(find . -maxdepth 3 -type f \( -iname "MarkazKar_WireGuard_Ready.zip" -o -iname "MarkazKar_WireGuard_Ready_FIXED.zip" \) | head -n 1)
+          ZIP_FILE=$(find . -maxdepth 4 -type f \( \
+            -iname "MarkazKar_WireGuard_Ready.zip" -o \
+            -iname "MarkazKar_WireGuard_Ready_FIXED.zip" \
+          \) | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Project ZIP file not found!"
-            find . -maxdepth 3 -type f
+            echo "Project ZIP not found!"
+            find . -maxdepth 4 -type f
             exit 1
           fi
 
+          echo "Found: $ZIP_FILE"
           mkdir -p project
           unzip -q "$ZIP_FILE" -d project
 
@@ -44,28 +46,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      
-
       - name: Set up Android SDK
-        shell: bash
-        run: |
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
+        uses: android-actions/setup-android@v4
+        with:
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+          accept-android-sdk-licenses: true
 
-          if [ -z "$SDKMANAGER" ]; then
-            echo "SDK Manager not found"
-            exit 1
-          fi
-
-          SDK_BIN=$(dirname "$SDKMANAGER")
-          echo "$SDK_BIN" >> "$GITHUB_PATH"
-
-          yes | "$SDKMANAGER" --licenses || true
-
-          "$SDKMANAGER" --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
-9
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
