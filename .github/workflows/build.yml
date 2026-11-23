@@ -3,45 +3,44 @@ name: Build MarkazKar APK
 on: [push, workflow_dispatch]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+build:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      - name: Extract ZIP project
-        run: unzip -q MarkazKar_WireGuard_Ready.zip -d project
+  - name: Extract ZIP project
+    run: |
+      unzip -q MarkazKar_WireGuard_Ready.zip -d project
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '17'
 
-      
-- name: Set up Android SDK
+  - name: Set up Android SDK
     uses: android-actions/setup-android@v4
     with:
       packages: 'platform-tools'
-      
-      - name: Install Android SDK
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+  - name: Install Android SDK components
+    run: |
+      sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build APK
-        working-directory: project
-        run: |
-          gradle wrapper --gradle-version 8.9
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+  - name: Set up Gradle
+    uses: gradle/actions/setup-gradle@v4
+    with:
+      gradle-version: '8.9'
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: MarkazKar-APK
-          path: project/app/build/outputs/apk/debug/*.apk
+  - name: Build APK
+    working-directory: project
+    run: |
+      gradle assembleDebug --stacktrace
+
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: MarkazKar-APK
+      path: project/app/build/outputs/apk/debug/*.apk
