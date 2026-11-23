@@ -45,10 +45,10 @@ jobs:
           java-version: '17'
 
       
+
       - name: Set up Android SDK
         shell: bash
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
 
           if [ -z "$SDKMANAGER" ]; then
@@ -56,16 +56,16 @@ jobs:
             exit 1
           fi
 
-          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          SDK_BIN=$(dirname "$SDKMANAGER")
+          echo "$SDK_BIN" >> "$GITHUB_PATH"
 
-          yes | "$SDKMANAGER" --licenses
+          yes | "$SDKMANAGER" --licenses || true
 
           "$SDKMANAGER" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
-
-
+9
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
