@@ -1,15 +1,12 @@
 
-name: Build MarkazKar APK
+name: Build ALI SHAMS CONTROL
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
     paths:
       - '*.zip'
       - '.github/workflows/build.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,96 +16,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find and Extract Project ZIP
-        shell: bash
+      - name: Extract project ZIP
         run: |
-          echo "Searching for project ZIP..."
-
-          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
-
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Project ZIP not found!"
-            ls -la
+            echo "No ZIP found"
+            exit 1
+          fi
+          mkdir -p source
+          unzip -q "$ZIP_FILE" -d source
+
+          if [ -f source/ALI_SHAMS_CONTROL/settings.gradle ]; then
+            echo "PROJECT_DIR=source/ALI_SHAMS_CONTROL" >> "$GITHUB_ENV"
+          elif [ -f source/settings.gradle ]; then
+            echo "PROJECT_DIR=source" >> "$GITHUB_ENV"
+          else
+            echo "Project files not found"
             exit 1
           fi
 
-          echo "Found ZIP: $ZIP_FILE"
-
-          mkdir -p project
-
-          unzip -q "$ZIP_FILE" -d project
-
-          echo "Checking project files..."
-
-          if [ ! -f project/settings.gradle ]; then
-            echo "ERROR: settings.gradle not found"
-            find project -maxdepth 3 -type f
-            exit 1
-          fi
-
-          if [ ! -f project/app/build.gradle ]; then
-            echo "ERROR: app/build.gradle not found"
-            find project -maxdepth 3 -type f
-            exit 1
-          fi
-
-          echo "Project extracted successfully!"
-
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK Components
-        shell: bash
+      - name: Install SDK
+        run: sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Build APK
         run: |
-          sdkmanager --install "platform-tools"
-          sdkmanager --install "platforms;android-35"
-          sdkmanager --install "build-tools;35.0.0"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Generate Gradle Wrapper
-        working-directory: project
-        shell: bash
-        run: |
-          gradle wrapper --gradle-version 8.9
-          chmod +x gradlew
-
-      - name: Build Debug APK
-        working-directory: project
-        shell: bash
-        run: |
-          ./gradlew --no-daemon clean assembleDebug --stacktrace
-
-      - name: Verify APK
-        shell: bash
-        run: |
-          APK="project/app/build/outputs/apk/debug/app-debug.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not generated!"
-            find project/app/build/outputs -type f
-            exit 1
-          fi
-
-          echo "APK successfully generated!"
-          ls -lh "$APK"
+          cd "$PROJECT_DIR"
+          gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MarkazKar-APK
-          path: project/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
+          name: ALI-SHAMS-CONTROL-APK
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
