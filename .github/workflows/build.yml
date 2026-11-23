@@ -1,11 +1,15 @@
+
 name: Build MarkazKar APK
 
-"on":
+on:
   push:
     branches:
       - main
       - master
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -15,38 +19,47 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract ZIP project
-        run: unzip -q MarkazKar_WireGuard_Ready.zip -d project
+      - name: Verify and extract ZIP project
+        run: |
+          test -f MarkazKar_WireGuard_Ready.zip
+          mkdir -p project
+          unzip -q MarkazKar_WireGuard_Ready.zip -d project
+          test -f project/settings.gradle
+          test -f project/app/build.gradle
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: platform-tools
+        uses: android-actions/setup-android@v3
 
       - name: Install Android SDK components
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          yes | sdkmanager --licenses
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Build APK
+      - name: Generate Gradle Wrapper
         working-directory: project
         run: |
           gradle wrapper --gradle-version 8.9
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+
+      - name: Build Debug APK
+        working-directory: project
+        run: |
+          ./gradlew --no-daemon clean assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MarkazKar-APK
           path: project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
