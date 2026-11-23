@@ -19,11 +19,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      
+
       - name: Verify and extract ZIP project
+        shell: bash
         run: |
-          test -f MarkazKar_WireGuard_Ready.zip
+          ZIP_FILE=$(find . -maxdepth 3 -type f \( -iname "MarkazKar_WireGuard_Ready.zip" -o -iname "MarkazKar_WireGuard_Ready_FIXED.zip" \) | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: Project ZIP file not found!"
+            find . -maxdepth 3 -type f
+            exit 1
+          fi
+
           mkdir -p project
-          unzip -q MarkazKar_WireGuard_Ready.zip -d project
+          unzip -q "$ZIP_FILE" -d project
+
           test -f project/settings.gradle
           test -f project/app/build.gradle
 
