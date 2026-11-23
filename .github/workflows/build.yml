@@ -22,18 +22,14 @@ jobs:
       - name: Find and Extract Project ZIP
         shell: bash
         run: |
-          ZIP_FILE=$(find . -maxdepth 4 -type f \( \
-            -iname "MarkazKar_WireGuard_Ready.zip" -o \
-            -iname "MarkazKar_WireGuard_Ready_FIXED.zip" \
-          \) | head -n 1)
+          ZIP_FILE=$(find . -maxdepth 4 -type f -iname "MarkazKar_WireGuard_Ready*.zip" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "Project ZIP not found!"
+            echo "ERROR: Project ZIP not found"
             find . -maxdepth 4 -type f
             exit 1
           fi
 
-          echo "Found: $ZIP_FILE"
           mkdir -p project
           unzip -q "$ZIP_FILE" -d project
 
@@ -48,12 +44,13 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-          accept-android-sdk-licenses: true
+
+      - name: Install Android SDK Components
+        shell: bash
+        run: |
+          sdkmanager --install "platform-tools"
+          sdkmanager --install "platforms;android-35"
+          sdkmanager --install "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -71,9 +68,14 @@ jobs:
         run: |
           ./gradlew --no-daemon clean assembleDebug --stacktrace
 
+      - name: Verify APK
+        run: |
+          ls -lh project/app/build/outputs/apk/debug/
+          test -f project/app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MarkazKar-APK
-          path: project/app/build/outputs/apk/debug/*.apk
+          path: project/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
