@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - '*.zip'
+      - 'ALI_SHAMS_CONTROL_V2.zip'
       - '.github/workflows/build.yml'
 
 permissions:
@@ -14,66 +14,43 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract project ZIP
-        run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+      - name: Extract ZIP
+        run: unzip -o ALI_SHAMS_CONTROL_V2.zip -d .
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "No ZIP found"
-            exit 1
-          fi
-
-          mkdir -p source
-          unzip -q "$ZIP_FILE" -d source
-
-          SETTINGS_FILE=$(find source -maxdepth 4 \
-            \( -name settings.gradle -o -name settings.gradle.kts \) \
-            -type f | head -n 1)
-
-          if [ -z "$SETTINGS_FILE" ]; then
-            echo "Gradle settings file not found"
-            exit 1
-          fi
-
-          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-
-          echo "Project directory: $PROJECT_DIR"
-
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: platform-tools
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Install SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Generate Wrapper
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.9
+          fi
+          chmod +x gradlew
 
       - name: Build APK
-        run: |
-          cd "$PROJECT_DIR"
-
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew --no-daemon assembleDebug
-          else
-            gradle --no-daemon assembleDebug
-          fi
+        run: ./gradlew --no-daemon clean assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ALI-SHAMS-CONTROL-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
